@@ -1,4 +1,4 @@
-import fitz  # This is the actual name of the PyMuPDF library inside Python
+import fitz
 
 def extract_resume_text(file_path):
     print(f"Instructing the bot to read: {file_path}...")
