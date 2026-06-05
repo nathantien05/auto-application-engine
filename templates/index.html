@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Application Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+        body { 
+            background-color: #fcfaf6; 
+            color: #4a453f; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; padding: 40px;
+        }
+
+        h1 { 
+            text-align: center; 
+            color: #5d564d; 
+            border-bottom: 1px solid #e0dcd2; 
+            padding-bottom: 10px; 
+            margin: 0 auto 40px auto; 
+            width: fit-content; 
+        }
+
+        h2 { color: #5d564d; border-bottom: 1px solid #e0dcd2; padding-bottom: 10px; margin-top: 40px; }
+        
+        .panel { 
+            background: #e6e1d6; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 30px; 
+            border: 1px solid #d4cebf;
+        }
+
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; font-weight: bold; color: #7a7266; text-transform: uppercase; font-size: 11px; }
+        input { background: #ffffff; border: 1px solid #d1ccc0; padding: 8px; border-radius: 4px; }
+        
+        /* NEW: Label to show persistent file path */
+        .file-status { font-size: 11px; color: #8b7355; margin-top: 4px; font-weight: 600; word-break: break-all; }
+
+        button { 
+            background-color: #8b7355; color: white; border: none; padding: 10px 20px; 
+            font-size: 14px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px;
+        }
+        button:hover { background-color: #6d5a42; }
+        .btn-bot { background-color: #a68966; }
+        .btn-bot:hover { background-color: #8b7355; }
+
+        /* GREEN GRADIENT PROGRESS BAR */
+        .progress-container { width: 100%; background-color: #d4cebf; border-radius: 4px; margin-top: 15px; overflow: hidden; height: 12px; }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #588157, #a3b18a); transition: width 0.4s ease; }
+        .progress-text { margin-top: 8px; font-size: 13px; color: #588157; font-weight: bold; }
+
+        .status-feed { display: grid; gap: 12px; }
+        .status-card { 
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-radius: 6px; border-left: 5px solid #d2b48c;
+            background: #ffffff; border-right: 1px solid #e0dcd2; border-top: 1px solid #e0dcd2; border-bottom: 1px solid #e0dcd2;
+        }
+        .card-success { border-left-color: #a3b18a; } 
+        .card-failed { border-left-color: #bc6c25; }  
+        .card-pending { border-left-color: #d1ccc0; }
+        
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #dad7cd; color: #344e41; }
+        .badge-failed { background: #fefae0; color: #bc6c25; }
+        .badge-pending { background: #f4f0e9; color: #8e8577; }
+    </style>
+</head>
+<body>
+
+    <h1>Auto Application Engine</h1>
+
+    <div class="panel">
+        <h2>Engine Settings</h2>
+        <div class="settings-grid">
+            <div class="input-group"><label>Target Search URL</label><input type="text" id="target_url" value="{{ config.target_url }}"></div>
+            <div class="input-group"><label>Max Pages</label><input type="number" id="max_pages" value="{{ config.max_pages }}"></div>
+            <div class="input-group full-width">
+                <label>Role Keywords (comma separated)</label>
+                <textarea id="role_keywords">{{ config.role_keywords | join(', ') }}</textarea>
+            </div>
+            <div class="input-group full-width">
+                <label>Exclude Keywords (comma separated)</label>
+                <textarea id="exclude_keywords">{{ config.exclude_keywords | join(', ') }}</textarea>
+            </div>
+            <div class="input-group">
+                <label>Upload Resume</label>
+                <!-- Added status text ID to the function call -->
+                <input type="file" id="resume_file" onchange="uploadFile('resume_file', 'resume_path', 'resume_status')">
+                <input type="hidden" id="resume_path" value="{{ config.resume_path }}">
+                <!-- Safely reads the config on reload to show what is currently locked in -->
+                <span class="file-status" id="resume_status">
+                    {{ 'Ready: ' ~ config.resume_path.split('\\')[-1].split('/')[-1] if config.resume_path else 'No file uploaded' }}
+                </span>
+            </div>
+            
+            <div class="input-group">
+                <label>Upload Transcript</label>
+                <input type="file" id="transcript_file" onchange="uploadFile('transcript_file', 'transcript_path', 'transcript_status')">
+                <input type="hidden" id="transcript_path" value="{{ config.transcript_path }}">
+                <span class="file-status" id="transcript_status">
+                    {{ 'Ready: ' ~ config.transcript_path.split('\\')[-1].split('/')[-1] if config.transcript_path else 'No file uploaded' }}
+                </span>
+            </div>
+        </div>
+        
+        <button onclick="launchScript('/run_scraper')">1. Run Scraper</button>
+        <button class="btn-bot" onclick="launchScript('/run_bot')">2. Run Auto-Applier</button>
+        
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="progress-text" class="progress-text">Idle</div>
+    </div>
+
+    <!-- CURRENT QUEUE -->
+    <h2>Current Queue</h2>
+    <div class="status-feed" id="queue-feed">
+        {% for job in queue %}
+        <div class="status-card card-pending">
+            <div><strong>{{ job.Company }}</strong></div>
+            <div>
+                <span class="badge badge-pending">PENDING</span>
+                <a href="{{ job['Job URL'] }}" target="_blank" style="margin-left:15px; color:#a68966; text-decoration:none;">View Job</a>
+            </div>
+        </div>
+        {% else %}
+        <p style="color:#adb5bd;">Queue is empty. Run the Scraper to find jobs.</p>
+        {% endfor %}
+    </div>
+
+    <!-- HISTORY -->
+    <h2>Application History</h2>
+    <div class="status-feed" id="history-feed">
+        {% for job in history | reverse %}
+        <div class="status-card {{ 'card-success' if job.get('Success') == 'SUCCESS' else 'card-failed' }}">
+            <div>
+                <strong>{{ job.get('Company', 'Unknown Company') }}</strong><br>
+                <small style="color:#6c757d">{{ job.get('Timestamp', '') }}</small>
+            </div>
+            <div>
+                <span class="badge {{ 'badge-success' if job.get('Success') == 'SUCCESS' else 'badge-failed' }}">
+                    {{ 'SUCCESS' if job.get('Success') == 'SUCCESS' else 'FAILED: ' ~ job.get('Reason', 'Unknown Error') }}
+                </span>
+                <a href="{{ job.get('Job URL', '#') }}" target="_blank" style="margin-left:15px; color:#8b7355; text-decoration:none;">View Job</a>
+            </div>
+        </div>
+        {% else %}
+        <p style="color:#adb5bd;">No applications logged yet.</p>
+        {% endfor %}
+    </div>
+
+    <script>
+     async function launchScript(route) {
+        // 1. Gather ALL data, including keywords
+        const data = {
+            target_url: document.getElementById('target_url').value,
+            max_pages: parseInt(document.getElementById('max_pages').value),
+            resume_path: document.getElementById('resume_path').value,
+            transcript_path: document.getElementById('transcript_path').value,
+            // These lines were missing!
+            role_keywords: document.getElementById('role_keywords').value.split(',').map(s => s.trim()).filter(s => s),
+            exclude_keywords: document.getElementById('exclude_keywords').value.split(',').map(s => s.trim()).filter(s => s)
+        };
+
+        const saveResponse = await fetch('/save_config', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(data) 
+        });
+
+        if (saveResponse.ok) {
+            fetch(route, { method: 'POST' });
+        } else {
+            alert("Failed to save settings.");
+        }
+    }   
+
+    async function launchScript(route) {
+        // Grab the elements first
+        const roleInput = document.getElementById('role_keywords');
+        const excludeInput = document.getElementById('exclude_keywords');
+
+        // Debug: Print to browser console
+        console.log("Role Textarea value:", roleInput ? roleInput.value : "NOT FOUND");
+        console.log("Exclude Textarea value:", excludeInput ? excludeInput.value : "NOT FOUND");
+
+        const data = {
+            target_url: document.getElementById('target_url').value,
+            max_pages: parseInt(document.getElementById('max_pages').value),
+            resume_path: document.getElementById('resume_path').value,
+            transcript_path: document.getElementById('transcript_path').value,
+            role_keywords: roleInput ? roleInput.value.split(',').map(s => s.trim()).filter(s => s) : [],
+            exclude_keywords: excludeInput ? excludeInput.value.split(',').map(s => s.trim()).filter(s => s) : []
+        };
+
+        console.log("Final object to send:", data);
+
+        const saveResponse = await fetch('/save_config', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(data) 
+        });
+
+        if (saveResponse.ok) {
+            fetch(route, { method: 'POST' });
+        } else {
+            alert("Failed to save settings.");
+        }
+    }
+
+    // Updated to accept a 3rd parameter: statusId
+    function uploadFile(inputId, hiddenInputId, statusId) {
+        const fileInput = document.getElementById(inputId);
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        fetch('/upload_file', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(async data => {
+                if(data.path) {
+                    document.getElementById(hiddenInputId).value = data.path;
+                    document.getElementById(statusId).innerText = "Ready: " + fileInput.files[0].name;
+
+                    // 2. Include keywords in the auto-save after upload too
+                    const configData = {
+                        target_url: document.getElementById('target_url').value,
+                        max_pages: parseInt(document.getElementById('max_pages').value),
+                        resume_path: document.getElementById('resume_path').value,
+                        transcript_path: document.getElementById('transcript_path').value,
+                        role_keywords: document.getElementById('role_keywords').value.split(',').map(s => s.trim()).filter(s => s),
+                        exclude_keywords: document.getElementById('exclude_keywords').value.split(',').map(s => s.trim()).filter(s => s)
+                    };
+
+                    await fetch('/save_config', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(configData) 
+                    });
+                }
+            });
+    }
+
+    setInterval(() => {
+        const cacheBuster = new Date().getTime();
+        
+        fetch('/progress?t=' + cacheBuster).then(res => res.json()).then(data => {
+            document.getElementById('progress-bar').style.width = data.percent + '%';
+            document.getElementById('progress-text').innerText = data.message;
+        });
+
+        fetch('/?t=' + cacheBuster).then(res => res.text()).then(html => {
+            const newDoc = new DOMParser().parseFromString(html, 'text/html');
+            
+            const newQueueFeed = newDoc.querySelector('#queue-feed');
+            if (newQueueFeed && document.querySelector('#queue-feed').innerHTML !== newQueueFeed.innerHTML) {
+                document.querySelector('#queue-feed').innerHTML = newQueueFeed.innerHTML;
+            }
+
+            const newHistoryFeed = newDoc.querySelector('#history-feed');
+            if (newHistoryFeed && document.querySelector('#history-feed').innerHTML !== newHistoryFeed.innerHTML) {
+                document.querySelector('#history-feed').innerHTML = newHistoryFeed.innerHTML;
+            }
+        });
+    }, 2000); 
+    </script>
+</body>
+</html>
