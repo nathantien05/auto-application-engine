@@ -14,8 +14,8 @@ with open("config.json", "r") as f:
     config = json.load(f)
 
 # These variables now hold the full paths to your files from the uploads/ folder
-RESUME_PATH = config.get("resume_path", "resume.pdf")
-TRANSCRIPT_PATH = config.get("transcript_path", "Transcript_Nathan Tien_5-26-2026.pdf")
+RESUME_PATH = config.get("resume_path")
+TRANSCRIPT_PATH = config.get("transcript_path")
 
 # --- NATIVE PDF WRITER ---
 def save_to_pdf(text, company_name):
@@ -209,6 +209,7 @@ if __name__ == "__main__":
     results_filename = "application.csv"
     duplicates_filename = "duplicates.csv"
     job_count = 0
+    
     # RESTRUCTURED HEADER: Success and Failed are now separate columns!
     if not os.path.exists(results_filename):
         with open(results_filename, "w", newline="", encoding="utf-8") as f:
@@ -261,7 +262,7 @@ if __name__ == "__main__":
             col_failed = "ERROR"
             col_reason = str(e)[:50] 
 
-        # Log to the CSV file with the new 6-column layout
+        # Log to the CSV file and duplicates file with the new 6-column layout
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if reason == "Already Applied":
             with open(duplicates_filename, "a", newline="", encoding="utf-8") as dup_file:
