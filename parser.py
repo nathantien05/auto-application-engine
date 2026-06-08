@@ -12,4 +12,5 @@ def extract_resume_text(file_path):
         full_text += page.get_text()
         
     doc.close()
+    
     return full_text
