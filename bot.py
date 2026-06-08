@@ -225,7 +225,7 @@ if __name__ == "__main__":
         lines = file.readlines()
 
     for line in lines:
-        if job_count == 295:
+        if job_count == 100:
             break;
         if not line.strip():
             continue
