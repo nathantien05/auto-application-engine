@@ -2,4 +2,5 @@ pycache/
 *.pyc
 config.json
 uploads/
+cover_letters/
 .env

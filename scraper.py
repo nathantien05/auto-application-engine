@@ -164,6 +164,6 @@ if __name__ == "__main__":
         
     SEARCH_URL = config.get("target_url", "")
     MAX_PAGES = int(config.get("max_pages", 10))
-    
+    print("Max amount of Jobs, 300")
     if SEARCH_URL:
         scrape_job_urls(SEARCH_URL, max_pages=MAX_PAGES)

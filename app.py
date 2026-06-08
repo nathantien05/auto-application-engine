@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-PYTHON_PATH = r"C:\Users\name\AppData\Local\Microsoft\WindowsApps\python3.11.exe"
+PYTHON_PATH = r"C:\Users\korai\AppData\Local\Microsoft\WindowsApps\python3.11.exe"
 CONFIG_FILE = "config.json"
 PROGRESS_FILE = "progress.json"
 

@@ -14,8 +14,8 @@ with open("config.json", "r") as f:
     config = json.load(f)
 
 # These variables now hold the full paths to your files from the uploads/ folder
-RESUME_PATH = config.get("resume_path")
-TRANSCRIPT_PATH = config.get("transcript_path")
+RESUME_PATH = config.get("resume_path", "resume.pdf")
+TRANSCRIPT_PATH = config.get("transcript_path", "Transcript_Nathan Tien_5-26-2026.pdf")
 
 # --- NATIVE PDF WRITER ---
 def save_to_pdf(text, company_name):
@@ -31,7 +31,7 @@ def save_to_pdf(text, company_name):
         clean_line = line.strip()
         if is_first_line and not clean_line:
             continue
-        if is_first_line and "name" in clean_line:
+        if is_first_line and "Nathan Tien" in clean_line:
             pdf.set_font("Times", style="B", size=22)
             pdf.cell(w=0, h=0.3, text=clean_line, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.set_y(pdf.get_y() + 0.05)
@@ -47,7 +47,7 @@ def save_to_pdf(text, company_name):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
         
-    filename = f"{output_folder}/name_{company_name}_Cover_Letter.pdf"
+    filename = f"{output_folder}/Nathan_Tien_{company_name}_Cover_Letter.pdf"
     pdf.output(filename)
     print(f"   -> SUCCESS! PDF saved to: {filename}")
     return filename
@@ -207,17 +207,25 @@ if __name__ == "__main__":
     print("🤖 BATCH PROCESSOR INITIATED...\n")
 
     results_filename = "application.csv"
-    
+    duplicates_filename = "duplicates.csv"
+    job_count = 0
     # RESTRUCTURED HEADER: Success and Failed are now separate columns!
     if not os.path.exists(results_filename):
         with open(results_filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Success", "Failed", "Reason", "Company", "Job URL", "Timestamp"])
 
+    if not os.path.exists(duplicates_filename):
+        with open(duplicates_filename, "w", newline="", encoding="utf-8") as dup_file:
+            duplicates = csv.writer(dup_file)
+            duplicates.writerow(["Reason", "Company", "Job URL", "Timestamp"])
+
     with open("jobs.txt", "r") as file:
         lines = file.readlines()
 
     for line in lines:
+        if job_count == 295:
+            break;
         if not line.strip():
             continue
 
@@ -242,9 +250,11 @@ if __name__ == "__main__":
             if is_success:
                 col_success = "SUCCESS"
                 col_reason = "Applied"
+                job_count += 1
             else:
                 col_failed = "FAILED"
                 col_reason = reason
+
                 
         except Exception as e:
             print(f"❌ Failed to process {target_company}. Error: {e}")
@@ -253,10 +263,14 @@ if __name__ == "__main__":
 
         # Log to the CSV file with the new 6-column layout
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(results_filename, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow([col_success, col_failed, col_reason, target_company, target_job_url, timestamp])
-
+        if reason == "Already Applied":
+            with open(duplicates_filename, "a", newline="", encoding="utf-8") as dup_file:
+                duplicates = csv.writer(dup_file)
+                duplicates.writerow([col_reason, target_company, target_job_url, timestamp])
+        else:
+            with open(results_filename, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([col_success, col_failed, col_reason, target_company, target_job_url, timestamp])
         time.sleep(3)
 
     print(f"\n✅ ALL JOBS PROCESSED.")

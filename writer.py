@@ -26,7 +26,10 @@ def generate_cover_letter(resume_text, job_description):
     4. Keep it grounded, professional, and confident. Do not use AI buzzwords like "delve" or "testament".
     
     Start the letter EXACTLY like this (do not add anything before my name):
-    XXXXXX
+    Nathan Tien
+    Clarksburg, MD
+    (301) 913-4624
+    nathantien05@gmail.com
     
     [Insert Company/Department Name]
     
